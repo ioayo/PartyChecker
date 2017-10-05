@@ -9,29 +9,42 @@ class App extends Component {
   };
 
   state = {
+  	isFiltered: false,
+    pendingGuest: "",
     guests: [
       {
         name: 'Treasure',
-        isConfirmed: false
+        isConfirmed: false,
+        isEditing: false
       },
       {
         name: 'Nick',
-        isConfirmed: true
+        isConfirmed: false,
+        isEditing: false
       },
       {
         name: 'Bulat',
-        isConfirmed: true
+        isConfirmed: false,
+        isEditing: true
       },
     ]
   }
   
-  toggleConfirmationAt = (indexToChange) => {
+	lastGuestId = 0;
+
+	newGuestId = () => {
+		const id = this.lastGuestId;
+		this.lastGuestId += 1;
+		return id;
+	}
+
+  toggleGuestPropertyAt = (property, indexToChange) => {
     this.setState({
       guests: this.state.guests.map((guest, index) => {
         if (index === indexToChange) {
           return {
             ...guest,
-            isConfirmed: !guest.isConfirmed
+            [property]: !guest[property]
           }
         }
         return guest;
@@ -39,6 +52,55 @@ class App extends Component {
     })
   }
 
+  toggleConfirmationAt = index => this.toggleGuestPropertyAt("isConfirmed", index);
+  
+  removeGuestAt = index => this.setState({
+    guests: [
+      ...this.state.guests.slice(0, index),
+      ...this.state.guests.slice(index + 1)
+    ]
+  })
+
+	toggleEditingAt = index => this.toggleGuestPropertyAt("isEditing", index);
+
+	setNameAt = (name, indexToChange) => {
+    this.setState({
+      guests: this.state.guests.map((guest, index) => {
+        if (index === indexToChange) {
+          return {
+            ...guest,
+            name: name
+          }
+        }
+        return guest;
+      })
+    })
+  }
+	
+	toggleFilter = () => this.setState({
+		isFiltered: !this.state.isFiltered
+	})
+
+  handleNameInput = (e) => {
+    this.setState({
+      pendingGuest: e.target.value
+    })
+  }
+
+  addUserToList = (e) => {
+    e.preventDefault();
+    this.setState({
+      guests: [
+        {
+          name: this.state.pendingGuest,
+          isConfirmed: false,
+          isEditing: false
+        },
+        ...this.state.guests
+      ],
+      pendingGuest: ""
+    })
+  }
   getTotalInvited = () => this.state.guest.length;
   // getAttendingGuests = () =>
   // getUnconfirmedGuests = () =>
@@ -52,8 +114,12 @@ class App extends Component {
         <header>
           <h1>RSVP</h1>
           <p>A Treehouse App</p>
-          <form>
-              <input type="text" value="Safia" placeholder="Invite Someone" />
+          <form onSubmit={this.addUserToList}>
+              <input 
+                type="text" 
+                onChange={this.handleNameInput}
+                value={this.state.pendingGuest}
+                placeholder="Invite Someone" />
               <button type="submit" name="submit" value="submit">Submit</button>
           </form>
         </header>
@@ -61,7 +127,11 @@ class App extends Component {
           <div>
             <h2>Invitees</h2>
             <label>
-              <input type="checkbox" /> Hide those who haven't responded 
+              <input type="checkbox" 
+              	onChange = {this.toggleFilter}
+								checked = {this.state.isFiltered}
+								/> 
+              	Hide those who haven't responded 
             </label>
           </div>
           <table className="counter">
@@ -82,7 +152,13 @@ class App extends Component {
           </table>
           <GuestList 
             guests={this.state.guests} 
-            toggleConfirmationAt={this.toggleConfirmationAt} />
+            toggleConfirmationAt={this.toggleConfirmationAt} 
+            toggleEditingAt={this.toggleEditingAt} 
+						setNameAt={this.setNameAt}
+						isFiltered={this.state.isFiltered}
+            removeGuestAt={this.removeGuestAt}
+            pendingGuest={this.state.pendingGuest}
+            />
         </div>
     </div>
     );
