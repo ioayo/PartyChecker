@@ -1,47 +1,30 @@
 import React, { Component } from 'react';
 import GuestList from './components/guestList';
+import Counter from './components/counter';
 import './index.css';
 
 class App extends Component {
-  constructor(props) {
-    super(props);
-    this.toggleConfirmationAt = this.toggleConfirmationAt.bind(this);
-  };
 
   state = {
   	isFiltered: false,
     pendingGuest: "",
-    guests: [
-      {
-        name: 'Treasure',
-        isConfirmed: false,
-        isEditing: false
-      },
-      {
-        name: 'Nick',
-        isConfirmed: false,
-        isEditing: false
-      },
-      {
-        name: 'Bulat',
-        isConfirmed: false,
-        isEditing: true
-      },
-    ]
+    guests: []
   }
   
 	lastGuestId = 0;
 
 	newGuestId = () => {
-		const id = this.lastGuestId;
+		const localStorageRef = localStorage.getItem('RSVP');
+		const id = localStorageRef ? JSON.parse(localStorageRef).length+1 : 0;
+		console.log('local', id)
 		this.lastGuestId += 1;
 		return id;
 	}
 
-  toggleGuestPropertyAt = (property, indexToChange) => {
+  toggleGuestProperty = (property, id) => {
     this.setState({
-      guests: this.state.guests.map((guest, index) => {
-        if (index === indexToChange) {
+      guests: this.state.guests.map((guest) => {
+        if (id === guest.id) {
           return {
             ...guest,
             [property]: !guest[property]
@@ -52,21 +35,18 @@ class App extends Component {
     })
   }
 
-  toggleConfirmationAt = index => this.toggleGuestPropertyAt("isConfirmed", index);
+  toggleConfirmation = id => this.toggleGuestProperty("isConfirmed", id);
   
-  removeGuestAt = index => this.setState({
-    guests: [
-      ...this.state.guests.slice(0, index),
-      ...this.state.guests.slice(index + 1)
-    ]
+  removeGuest = id => this.setState({
+		guests: this.state.guests.filter(guest => id !== guest.id)
   })
 
-	toggleEditingAt = index => this.toggleGuestPropertyAt("isEditing", index);
+	toggleEditing = id => this.toggleGuestProperty("isEditing", id);
 
-	setNameAt = (name, indexToChange) => {
+	setName = (name, id) => {
     this.setState({
       guests: this.state.guests.map((guest, index) => {
-        if (index === indexToChange) {
+        if (id === guest.id) {
           return {
             ...guest,
             name: name
@@ -87,76 +67,86 @@ class App extends Component {
     })
   }
 
+
   addUserToList = (e) => {
     e.preventDefault();
+    const id = this.newGuestId();
     this.setState({
       guests: [
         {
           name: this.state.pendingGuest,
           isConfirmed: false,
-          isEditing: false
+          isEditing: false,
+          id
         },
         ...this.state.guests
       ],
       pendingGuest: ""
     })
   }
-  getTotalInvited = () => this.state.guest.length;
-  // getAttendingGuests = () =>
-  // getUnconfirmedGuests = () =>
-  // 
+  getTotalInvited = () => this.state.guests.length;
+
+  getAttendingGuests = () => this.state.guests.reduce(
+  	(total, guest) => guest.isConfirmed ? total + 1 : total, 0);
   
+	componentWillMount() {
+		//check if there is any invitees in localstorage
+		
+		const localStorageRef = localStorage.getItem('RSVP');
 
+		if (localStorageRef) 
+			{
+				this.setState({
+					guests: JSON.parse(localStorageRef)
+				})
+			}
+	}
 
+	componentWillUpdate(nextProps, nextState) {
+		localStorage.setItem('RSVP', JSON.stringify(nextState.guests))
+	}
+ 
   render() {
+  	const totalInvited = this.getTotalInvited();
+  	const numberAttending = this.getAttendingGuests();
+  	const numberUnconfirmed = totalInvited - numberAttending;
     return (
       <div className="App">
         <header>
-          <h1>RSVP</h1>
-          <p>A Treehouse App</p>
+          <h1>Gonna Drink</h1>
+          <p>Кого зовем на вечеринку?</p>
           <form onSubmit={this.addUserToList}>
               <input 
                 type="text" 
                 onChange={this.handleNameInput}
                 value={this.state.pendingGuest}
-                placeholder="Invite Someone" />
-              <button type="submit" name="submit" value="submit">Submit</button>
+                placeholder="Кого позвать?" />
+              <button type="submit" name="submit" value="submit">Пригласить!</button>
           </form>
         </header>
         <div className="main">
           <div>
-            <h2>Invitees</h2>
+            <h2>Приглашенные</h2>
             <label>
               <input type="checkbox" 
               	onChange = {this.toggleFilter}
 								checked = {this.state.isFiltered}
 								/> 
-              	Hide those who haven't responded 
+              	Спрятать тех, кто отказался
             </label>
           </div>
-          <table className="counter">
-            <tbody>
-              <tr>
-                <td>Attending:</td>
-                <td>2</td>
-              </tr>
-              <tr>
-                <td>Unconfirmed:</td>
-                <td>1</td>
-              </tr>
-              <tr>
-                <td>Total:</td>
-                <td>3</td>
-              </tr>
-            </tbody>
-          </table>
+          <Counter 
+						totalInvited={totalInvited}
+						numberAttending={numberAttending}
+						numberUnconfirmed={numberUnconfirmed}
+          />
           <GuestList 
             guests={this.state.guests} 
-            toggleConfirmationAt={this.toggleConfirmationAt} 
-            toggleEditingAt={this.toggleEditingAt} 
-						setNameAt={this.setNameAt}
+            toggleConfirmation={this.toggleConfirmation} 
+            toggleEditing={this.toggleEditing} 
+						setName={this.setName}
 						isFiltered={this.state.isFiltered}
-            removeGuestAt={this.removeGuestAt}
+            removeGuest={this.removeGuest}
             pendingGuest={this.state.pendingGuest}
             />
         </div>
